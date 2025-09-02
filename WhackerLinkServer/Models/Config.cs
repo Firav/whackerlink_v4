@@ -49,6 +49,7 @@ namespace WhackerLinkServer.Models
             public string Address { get; set; }
             public int Port { get; set; }
             public float PreEncodeGain { get; set; } = 1.0f;
+            public float PostEncodeGain { get; set; } = 1.0f;
             public bool AffilationRestricted { get; set; } = true;
             public bool AffiliatedSourceRestricted { get; set; } = true;
             public bool NoSelfRepeat { get; set; } = true;

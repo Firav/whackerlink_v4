@@ -65,6 +65,8 @@ masters:
     vocoderMode: 2
     # Pre Vocoder encode PCM gain
     preEncodeGain: 1.0
+    # Post Vocoder encode PCM gain (applied to output audio)
+    postEncodeGain: 1.0
 
     # Send reports via GET requests
     reporter:

@@ -136,6 +136,11 @@ namespace WhackerLinkServer.RestApi.Controllers
                     return BadRequest(new { error = "The 'PreEncodeGain' field is required and must be a valid float." });
                 }
 
+                if (!masterConfigJson.TryGetProperty("PostEncodeGain", out var postEncodeGainProp) || !postEncodeGainProp.TryGetSingle(out _))
+                {
+                    return BadRequest(new { error = "The 'PostEncodeGain' field is required and must be a valid float." });
+                }
+
                 if (!masterConfigJson.TryGetProperty("Reporter", out var reporterProp) || !reporterProp.TryGetProperty("Enabled", out var reporterEnabledProp) || reporterEnabledProp.ValueKind != JsonValueKind.True && reporterEnabledProp.ValueKind != JsonValueKind.False)
                 {
                     return BadRequest(new { error = "The 'Reporter.Enabled' field is required and must be a boolean." });
@@ -239,6 +244,7 @@ namespace WhackerLinkServer.RestApi.Controllers
                     DisableLocBcastLogs = masterConfigJson.GetProperty("DisableLocBcastLogs").GetBoolean(),
                     VocoderMode = Enum.Parse<VocoderModes>(masterConfigJson.GetProperty("VocoderMode").GetString()),
                     PreEncodeGain = masterConfigJson.GetProperty("PreEncodeGain").GetSingle(),
+                    PostEncodeGain = masterConfigJson.GetProperty("PostEncodeGain").GetSingle(),
                     Reporter = new Config.ReporterConfiguration
                     {
                         Enabled = masterConfigJson.GetProperty("Reporter").GetProperty("Enabled").GetBoolean(),

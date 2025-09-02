@@ -1142,6 +1142,22 @@ namespace WhackerLinkServer
                             //// Convert back to PCM
                             //short[] filtered16 = AudioConverter.FloatToPcm(signal.Samples);
 
+                            // Apply post-encode gain if configured
+                            if (masterConfig.PostEncodeGain != 1.0f)
+                            {
+                                for (int i = 0; i < decodedSamples.Length; i++)
+                                {
+                                    float sample = decodedSamples[i] * masterConfig.PostEncodeGain;
+                                    // Clamp to prevent overflow
+                                    if (sample > short.MaxValue)
+                                        sample = short.MaxValue;
+                                    else if (sample < short.MinValue)
+                                        sample = short.MinValue;
+                                    
+                                    decodedSamples[i] = (short)sample;
+                                }
+                            }
+
                             int pcmIdx = 0;
                             byte[] pcmData = new byte[decodedSamples.Length * 2];
                             for (int i = 0; i < decodedSamples.Length; i++)
@@ -1180,6 +1196,56 @@ namespace WhackerLinkServer
             }
             else
             {
+                // Apply post-encode gain to raw PCM audio when vocoder is not used
+                if (masterConfig.PostEncodeGain != 1.0f)
+                {
+                    var chunks = AudioConverter.SplitToChunks(audioPacket.Data);
+                    List<byte[]> processedChunks = new List<byte[]>();
+
+                    foreach (var chunk in chunks)
+                    {
+                        // Convert byte array to short array
+                        int smpIdx = 0;
+                        short[] samples = new short[chunk.Length / 2];
+                        for (int pcmIdx = 0; pcmIdx < chunk.Length; pcmIdx += 2)
+                        {
+                            samples[smpIdx] = (short)((chunk[pcmIdx + 1] << 8) + chunk[pcmIdx]);
+                            smpIdx++;
+                        }
+
+                        // Apply post-encode gain
+                        for (int i = 0; i < samples.Length; i++)
+                        {
+                            float sample = samples[i] * masterConfig.PostEncodeGain;
+                            // Clamp to prevent overflow
+                            if (sample > short.MaxValue)
+                                sample = short.MaxValue;
+                            else if (sample < short.MinValue)
+                                sample = short.MinValue;
+                            
+                            samples[i] = (short)sample;
+                        }
+
+                        // Convert back to byte array
+                        int pcmIdx = 0;
+                        byte[] pcmData = new byte[samples.Length * 2];
+                        for (int i = 0; i < samples.Length; i++)
+                        {
+                            pcmData[pcmIdx] = (byte)(samples[i] & 0xFF);
+                            pcmData[pcmIdx + 1] = (byte)((samples[i] >> 8) & 0xFF);
+                            pcmIdx += 2;
+                        }
+
+                        processedChunks.Add(pcmData);
+                    }
+
+                    var combinedAudioData = AudioConverter.CombineChunks(processedChunks);
+                    if (combinedAudioData != null)
+                    {
+                        audioPacket.Data = combinedAudioData;
+                    }
+                }
+
                 audioPacket.AudioMode = AudioMode.PCM_8_16;
                 if (!affRestrict)
                     master.BroadcastPacket(audioPacket.GetStrData(), client);
